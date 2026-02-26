@@ -1,0 +1,20 @@
+{
+    "$schema": "https://raw.githubusercontent.com/railwayapp/railway-json-schema/refs/heads/main/schema.json",
+    "services": {
+        "backend": {
+            "name": "plant-diagnosis-backend",
+            "source": {
+                "root": "."
+            },
+            "build": {
+                "dockerFilePath": "Dockerfile.backend"
+            }
+        },
+        "frontend": {
+            "name": "plant-diagnosis-frontend",
+            "source": {
+                "root": "frontend"
+            }
+        }
+    }
+}

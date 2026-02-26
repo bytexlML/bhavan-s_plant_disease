@@ -148,51 +148,66 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('expert_session');
+    localStorage.removeItem('user_details');
+    setIsLoggedIn(false);
+    speak("Expert session terminated. Secure logout complete.");
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="login-screen animate-fade">
         <div className="glass-card login-form">
-          <div className="college-logo-container" style={{ margin: '0 auto 2rem', width: 'fit-content' }}>
-            <img src="/logo.jpg" alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '50%' }} />
+          <div className="college-logo-container" style={{ margin: '0 auto 1.5rem', width: 'fit-content', padding: '15px' }}>
+            <img src="/logo.jpg" alt="Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', border: '2px solid var(--secondary)' }} />
           </div>
-          <h2 style={{ color: 'var(--secondary)' }}>Institutional Portal</h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginBottom: '1.5rem' }}>Bhavan's Vivekananda College</p>
+          <p style={{ letterSpacing: '2px', fontWeight: '800', color: 'var(--secondary)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+            Bhavan's Vivekananda College
+          </p>
+          <h2>Expert Diagnostic Portal</h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)', marginBottom: '2.5rem' }}>Authorized Botanical Research Access</p>
 
           <form onSubmit={handleRegister}>
-            <input
-              type="text"
-              className="login-input"
-              placeholder="Full Name"
-              value={userData.name}
-              onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-              required
-              style={{ marginBottom: '1rem' }}
-            />
-            <input
-              type="email"
-              className="login-input"
-              placeholder="E-mail Address"
-              value={userData.email}
-              onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-              required
-              style={{ marginBottom: '1rem' }}
-            />
-            <input
-              type="tel"
-              className="login-input"
-              placeholder="Phone Number"
-              value={userData.phone}
-              onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
-              required
-              style={{ marginBottom: '1.5rem' }}
-            />
-            <button className="btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Registering...' : 'Authorize Access'}
+            <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+              <input
+                type="text"
+                className="login-input"
+                placeholder="Expert Name"
+                value={userData.name}
+                onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+              <input
+                type="email"
+                className="login-input"
+                placeholder="Institutional Email"
+                value={userData.email}
+                onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div style={{ position: 'relative', marginBottom: '2rem' }}>
+              <input
+                type="tel"
+                className="login-input"
+                placeholder="Registry Phone Number"
+                value={userData.phone}
+                onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
+                required
+              />
+            </div>
+            <button className="btn-primary" style={{ width: '100%', padding: '1.2rem', fontSize: '1.1rem' }} disabled={loading}>
+              {loading ? 'Authenticating...' : 'Authorize Access'}
             </button>
           </form>
-          <p style={{ marginTop: '2rem', fontSize: '0.7rem', color: 'var(--text-dim)', opacity: 0.5 }}>
-            Restricted System • Authorized Personnel Only
-          </p>
+          <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Secure Gateway • Institutional Protocol v2.4
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -204,10 +219,21 @@ export default function App() {
         <div className="college-logo-container">
           <img src="/logo.jpg" alt="Bhavan's College Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'contain' }} />
         </div>
-        <div>
-          <p style={{ letterSpacing: '2px', fontWeight: '600', color: 'var(--secondary)' }}>BHAVAN'S VIVEKANANDA COLLEGE</p>
-          <h1>Expert Diagnostic System</h1>
-          <p>Professional Botanical Health & Disease Analysis</p>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ letterSpacing: '2px', fontWeight: '600', color: 'var(--secondary)' }}>BHAVAN'S VIVEKANANDA COLLEGE</p>
+              <h1>Expert Diagnostic System</h1>
+              <p>Professional Botanical Health & Disease Analysis</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="tts-btn"
+              style={{ padding: '0.8rem 1.5rem', borderColor: 'rgba(255,68,68,0.3)', color: '#ff6666' }}
+            >
+              <span>🔒</span> Logout
+            </button>
+          </div>
         </div>
       </header>
 
