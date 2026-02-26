@@ -32,8 +32,9 @@ def get_db():
 @app.on_event("startup")
 def startup_event():
     init_db()
-    if not os.path.exists("uploads"):
-        os.makedirs("uploads")
+    uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
+    if not os.path.exists(uploads_dir):
+        os.makedirs(uploads_dir)
 
 from pydantic import BaseModel
 
@@ -63,7 +64,8 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
         # Save file
         file_content = await file.read()
-        file_path = os.path.join("uploads", file.filename)
+        uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
+        file_path = os.path.join(uploads_dir, file.filename)
         with open(file_path, "wb") as buffer:
             buffer.write(file_content)
         

@@ -1,0 +1,33 @@
+services:
+  # Backend FastAPI Service
+  - type: web
+    name: plant-diagnosis-backend
+    env: docker
+    dockerfilePath: Dockerfile.backend
+    plan: standard # Recommended for Tensorflow memory needs
+    healthCheckPath: /health
+    disk:
+      name: persistent-data
+      mountPath: /app/persistent
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///app/persistent/plant_health.db
+      - key: UPLOADS_PATH
+        value: /app/persistent/uploads
+      - key: PORT
+        value: 8000
+
+  # Frontend Next.js Service
+  - type: web
+    name: plant-diagnosis-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: plant-diagnosis-backend
+          type: web
+          property: host

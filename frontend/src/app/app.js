@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // STABLE TUNNEL BRIDGE
-const API_URL = 'https://bhavans-plant-health.loca.lt';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function App() {
   const [image, setImage] = useState(null);
