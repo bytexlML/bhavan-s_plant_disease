@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 
+// STABLE TUNNEL BRIDGE
+const API_URL = 'https://bhavans-plant-health.loca.lt';
+
 export default function App() {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -10,13 +13,34 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    fetch(`${apiUrl}/stats`, {
+    // 1. Fetch Stats
+    fetch(`${API_URL}/stats`, {
       headers: { 'Bypass-Tunnel-Reminder': 'true' }
     })
       .then(res => res.json())
       .then(data => setStats(data))
-      .catch(err => console.error(err));
+      .catch(err => console.error("Stats error:", err));
+
+    // 2. Security Deterrents (Disable Inspect/Right-Click)
+    const handleContextMenu = (e) => e.preventDefault();
+    const handleKeyDown = (e) => {
+      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+      if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
+        (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const speak = (text) => {
@@ -59,12 +83,17 @@ export default function App() {
     formData.append('file', image);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const resp = await fetch(`${apiUrl}/predict`, {
+      const resp = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         headers: { 'Bypass-Tunnel-Reminder': 'true' },
         body: formData,
       });
+
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`Server responded with ${resp.status}: ${errorText.substring(0, 50)}`);
+      }
+
       const data = await resp.json();
       setResult(data);
 
@@ -73,7 +102,7 @@ export default function App() {
       speak(speechText);
 
     } catch (err) {
-      alert("System connection error. Please verify the expert server is active.");
+      alert(`System connection error: ${err.message}. Please verify the expert server is active.`);
       speak("I encountered an error connecting to the diagnostic server.");
     } finally {
       setLoading(false);
@@ -123,13 +152,12 @@ export default function App() {
           {loading && (
             <div style={{ textAlign: 'center', marginTop: '2rem' }}>
               <div className="spinner"></div>
-              <p style={{ color: var(--secondary) }}>Consulting Plant Health Expert...</p>
+              <p style={{ color: 'var(--secondary)' }}>Consulting Plant Health Expert...</p>
             </div>
           )}
-    </div>
+        </div>
 
-        {
-    result && (
+        {result && (
           <div className="animate-fade">
             <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
               <div className="result-header">
@@ -139,11 +167,11 @@ export default function App() {
                   <p style={{ fontSize: '1.2rem', color: 'var(--accent)' }}>Detected in {result.plant_name}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.8rem', color: var(--text-dim) }}>CONFIDENCE SCORE</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: var(--secondary) }}>{result.confidence_score}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>CONFIDENCE SCORE</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--secondary)' }}>{result.confidence_score}</div>
                 </div>
               </div>
-              
+
               <div className="confidence-bar">
                 <div className="confidence-fill" style={{ width: result.confidence_score }}></div>
               </div>
@@ -158,43 +186,41 @@ export default function App() {
                   </button>
                 )}
               </div>
-            </div >
+            </div>
 
             <div className="glass-card" style={{ padding: '2.5rem' }}>
               <h3 style={{ color: 'var(--secondary)', marginBottom: '1.5rem', borderLeft: '4px solid var(--secondary)', paddingLeft: '1rem' }}>Biological Insight</h3>
-              
+
               <div style={{ marginBottom: '2rem' }}>
-                <strong style={{ display: 'block', marginBottom: '0.5rem', color: var(--text-dim) }}>PROFESSIONAL ANALYSIS:</strong>
+                <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-dim)' }}>PROFESSIONAL ANALYSIS:</strong>
                 <p style={{ fontSize: '1.1rem' }}>{result.biological_explanation}</p>
               </div>
 
               <div style={{ background: 'rgba(197, 160, 89, 0.1)', padding: '1.5rem', borderRadius: '15px', border: '1px solid rgba(197, 160, 89, 0.2)' }}>
-                <strong style={{ color: var(--secondary), display: 'block', marginBottom: '0.5rem' }}>📜 RECOMMENDED ACTION:</strong>
+                <strong style={{ color: 'var(--secondary)', display: 'block', marginBottom: '0.5rem' }}>📜 RECOMMENDED ACTION:</strong>
                 <p style={{ fontSize: '1rem' }}>{result.recommended_action}</p>
-              </div >
-            </div >
-          </div >
-        )
-  }
-      </main >
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
 
-    { stats && (
-      <footer style={{ marginTop: '4rem', textAlign: 'center', opacity: 0.6 }}>
-        <div className="glass-card" style={{ display: 'inline-flex', gap: '3rem', padding: '1rem 3rem', borderRadius: '50px' }}>
-          <div><strong>{stats.total_predictions}</strong> Reports Generated</div>
-          <div><strong>{stats.top_plant}</strong> Top Subject</div>
-        </div>
-      </footer>
-    )
-}
+      {stats && (
+        <footer style={{ marginTop: '4rem', textAlign: 'center', opacity: 0.6 }}>
+          <div className="glass-card" style={{ display: 'inline-flex', gap: '3rem', padding: '1rem 3rem', borderRadius: '50px' }}>
+            <div><strong>{stats.total_predictions}</strong> Reports Generated</div>
+            <div><strong>{stats.top_plant}</strong> Top Subject</div>
+          </div>
+        </footer>
+      )}
 
-<style jsx>{`
+      <style jsx>{`
         @keyframes pulse {
           0% { transform: scale(1); opacity: 0.8; }
           50% { transform: scale(1.1); opacity: 1; }
           100% { transform: scale(1); opacity: 0.8; }
         }
       `}</style>
-    </div >
+    </div>
   );
 }
