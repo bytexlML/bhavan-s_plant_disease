@@ -59,6 +59,10 @@ async def register(request: UserRegister, db: Session = Depends(get_db)):
 def read_root():
     return {"message": "Bhavan's Plant Health Detection System API is running."}
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "plant-diagnosis-backend"}
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
