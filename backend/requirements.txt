@@ -2,7 +2,6 @@
 fastapi==0.104.1
 uvicorn==0.24.0
 sqlalchemy==2.0.23
-tensorflow==2.15.0
 numpy==1.26.2
 # ml-dtypes>=0.5.0
 pillow==10.1.0
