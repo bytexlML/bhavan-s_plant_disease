@@ -1,5 +1,18 @@
 {
     "version": 2,
+    "builds": [
+        {
+            "src": "api/index.py",
+            "use": "@vercel/python",
+            "config": {
+                "runtime": "python3.12"
+            }
+        },
+        {
+            "src": "frontend/package.json",
+            "use": "@vercel/next"
+        }
+    ],
     "rewrites": [
         {
             "source": "/api/(.*)",
@@ -8,16 +21,6 @@
         {
             "source": "/((?!api/).*)",
             "destination": "/frontend/$1"
-        }
-    ],
-    "builds": [
-        {
-            "src": "api/index.py",
-            "use": "@vercel/python"
-        },
-        {
-            "src": "frontend/package.json",
-            "use": "@vercel/next"
         }
     ]
 }
