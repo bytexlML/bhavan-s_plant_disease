@@ -10,7 +10,9 @@ from .models.model_service import model_service
 from .utils.image_processor import preprocess_image, format_confidence
 from .explanations.engine import EXPLANATIONS
 
+print("Starting FastAPI application...")
 app = FastAPI(title="Bhavan's Plant Health Detection API")
+print("FastAPI app instance created.")
 
 # Enable CORS for Next.js frontend
 app.add_middleware(
@@ -31,8 +33,10 @@ def get_db():
 
 @app.on_event("startup")
 def startup_event():
+    print("Executing startup event...")
     # Ensure database directory exists
     db_url = os.getenv("DATABASE_URL", "sqlite:///./plant_health.db")
+    print(f"DATABASE_URL is: {db_url}")
     if db_url.startswith("sqlite:///"):
         db_path = db_url.replace("sqlite:///", "")
         db_dir = os.path.dirname(db_path)
@@ -40,10 +44,14 @@ def startup_event():
             os.makedirs(db_dir)
             print(f"Created database directory: {db_dir}")
             
+    print("Initializing database...")
     init_db()
+    print("Database initialized.")
     uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
     if not os.path.exists(uploads_dir):
         os.makedirs(uploads_dir)
+        print(f"Created uploads directory: {uploads_dir}")
+    print("Startup event complete.")
 
 from pydantic import BaseModel
 
