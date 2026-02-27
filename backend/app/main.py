@@ -96,7 +96,14 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
         # Save file
         file_content = await file.read()
-        uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
+        
+        # VERCEL FIX: Use /tmp for uploads
+        default_uploads = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
+        uploads_dir = os.getenv("UPLOADS_PATH", default_uploads)
+        
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir)
+            
         file_path = os.path.join(uploads_dir, file.filename)
         with open(file_path, "wb") as buffer:
             buffer.write(file_content)
@@ -141,30 +148,18 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
-    total = db.query(Prediction).count()
-    # Simplified stats for demo
-    return {
-        "total_predictions": total,
-        "model_accuracy": "95%",  # Target accuracy
-        "common_diseases": ["Tomato Late Blight", "Potato Early Blight", "Apple Scab"]
-    }
-
-# Mount static files (Frontend)
-# In Docker, the frontend is built into 'frontend/out'
-frontend_path = os.path.join(os.getcwd(), "frontend", "out")
-
-if os.path.exists(frontend_path):
-    print(f"Mounting static frontend from: {frontend_path}")
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
-    
-    # SPA Fallback: Redirect all non-API 404s to index.html
-    @app.exception_handler(404)
-    async def not_found_exception_handler(request: Request, exc: HTTPException):
-        if not request.url.path.startswith("/api"):
-            return FileResponse(os.path.join(frontend_path, "index.html"))
-        return JSONResponse(status_code=404, content={"detail": "Not Found"})
-else:
-    print(f"WARNING: Frontend path not found at {frontend_path}. API-only mode.")
+    try:
+        total = db.query(Prediction).count()
+        # Simplified stats for demo
+        return {
+            "total_predictions": total,
+            "model_accuracy": "95%",  # Target accuracy
+            "common_diseases": ["Tomato Late Blight", "Potato Early Blight", "Apple Scab"],
+            "top_plant": "Tomato"
+        }
+    except Exception as e:
+        print(f"Stats Error: {e}")
+        return {"total_predictions": 0, "top_plant": "None"}
 
 if __name__ == "__main__":
     import uvicorn
