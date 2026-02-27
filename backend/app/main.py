@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 import os
@@ -37,7 +37,7 @@ def get_db():
 def startup_event():
     print("Executing startup event...")
     # Ensure database directory exists
-    # VERCEL/DOCKER FIX: Use /tmp or /app/data
+    # Use /app/data for persistence in Docker
     default_db = "sqlite:////app/data/plant_health.db" if os.path.exists("/app/data") else "sqlite:///./plant_health.db"
     db_url = os.getenv("DATABASE_URL", default_db)
     print(f"DATABASE_URL is: {db_url}")
