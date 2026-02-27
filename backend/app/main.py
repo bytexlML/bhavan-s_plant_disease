@@ -15,16 +15,16 @@ from .explanations.engine import EXPLANATIONS
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure database and uploads exist
-    print("Vercel context: Initializing resources in lifespan...")
+    print("Local System: Initializing resources...")
     try:
         init_db()
         
-        default_uploads = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
-        uploads_dir = os.getenv("UPLOADS_PATH", default_uploads)
+        uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
         if not os.path.exists(uploads_dir):
             os.makedirs(uploads_dir)
+            print(f"Verified uploads directory: {uploads_dir}")
     except Exception as e:
-        print(f"LIFESPAN STARTUP ERROR: {e}")
+        print(f"FASTAPI STARTUP ERROR: {e}")
     
     yield
     # Shutdown logic (if any)
@@ -82,10 +82,7 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
         # Save file
         file_content = await file.read()
         
-        # VERCEL FIX: Use /tmp for uploads
-        default_uploads = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
-        uploads_dir = os.getenv("UPLOADS_PATH", default_uploads)
-        
+        uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
         if not os.path.exists(uploads_dir):
             os.makedirs(uploads_dir)
             
