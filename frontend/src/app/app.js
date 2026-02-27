@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 // STABLE TUNNEL BRIDGE
 // STABLE TUNNEL BRIDGE
 // STABLE TUNNEL BRIDGE
-const API_URL = 'http://localhost:8000/api';
+const API_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:8000/api'
+  : '/api';
 
 export default function App() {
   const [image, setImage] = useState(null);

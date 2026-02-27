@@ -5,10 +5,19 @@ import base64
 from openai import OpenAI
 from PIL import Image
 from dotenv import load_dotenv
-from ..explanations.engine import PLANT_CLASSES
+from app.explanations.engine import PLANT_CLASSES
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables
+import sys
+if getattr(sys, 'frozen', False):
+    # Try internal bundled .env first
+    bundle_env = os.path.join(sys._MEIPASS, "backend", ".env")
+    if os.path.exists(bundle_env):
+        load_dotenv(bundle_env)
+    # Also allow external .env to override
+    load_dotenv(os.path.join(os.path.dirname(sys.executable), ".env"))
+else:
+    load_dotenv()
 
 class ModelService:
     def __init__(self):

@@ -1,16 +1,24 @@
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 import os
 import shutil
+import sys
 from contextlib import asynccontextmanager
 
-from .models.database import SessionLocal, init_db, Prediction
-from .models.model_service import model_service
-from .utils.image_processor import format_confidence
-from .explanations.engine import EXPLANATIONS
+# Add backend directory to sys.path for absolute imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+from app.models.database import SessionLocal, init_db, Prediction
+from app.models.model_service import model_service
+from app.utils.image_processor import format_confidence
+from app.explanations.engine import EXPLANATIONS
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,6 +49,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Determine the base path for static files
+# When running as a PyInstaller bundle, sys._MEIPASS is set
+import sys
+if getattr(sys, 'frozen', False):
+    # If running in a bundle, use the internal path
+    base_path = sys._MEIPASS
+else:
+    # If running in normal mode, use the project root
+    base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+static_dir = os.path.join(base_path, "frontend", "out")
+
+# Mount static files if the directory exists
+if os.path.exists(static_dir):
+    app.mount("/_next", StaticFiles(directory=os.path.join(static_dir, "_next")), name="next-static")
+    
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -58,7 +82,7 @@ class UserRegister(BaseModel):
 
 @app.post("/api/register")
 async def register(request: UserRegister, db: Session = Depends(get_db)):
-    from .models.database import UserRegistration
+    from app.models.database import UserRegistration
     new_user = UserRegistration(
         name=request.name,
         email=request.email,
@@ -143,6 +167,22 @@ def get_stats(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Stats Error: {e}")
         return {"total_predictions": 0, "top_plant": "None"}
+
+# Catch-all route for frontend (must be at the bottom)
+if os.path.exists(static_dir):
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Serve static assets if they exist
+        file_path = os.path.join(static_dir, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+            
+        # Default to index.html for SPA routing
+        index_path = os.path.join(static_dir, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+            
+        return {"message": "Bhavan's API is running. Frontend assets not found."}
 
 if __name__ == "__main__":
     import uvicorn

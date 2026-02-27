@@ -28,7 +28,11 @@ class Prediction(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 # Database Setup
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./plant_health.db")
+if os.environ.get("VERCEL"):
+    # Vercel has a read-only filesystem except for /tmp
+    SQLALCHEMY_DATABASE_URL = "sqlite:////tmp/plant_health.db"
+else:
+    SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./plant_health.db")
 
 # Only use check_same_thread: False if we are using SQLite
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
