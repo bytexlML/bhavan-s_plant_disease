@@ -2,21 +2,37 @@
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 import os
 import shutil
+from contextlib import asynccontextmanager
 
 from .models.database import SessionLocal, init_db, Prediction
 from .models.model_service import model_service
-from .utils.image_processor import preprocess_image, format_confidence
+from .utils.image_processor import format_confidence
 from .explanations.engine import EXPLANATIONS
 
-print("Starting FastAPI application...")
-app = FastAPI(title="Bhavan's Plant Health Detection API")
-print("FastAPI app instance created.")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Ensure database and uploads exist
+    print("Vercel context: Initializing resources in lifespan...")
+    try:
+        init_db()
+        
+        default_uploads = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
+        uploads_dir = os.getenv("UPLOADS_PATH", default_uploads)
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir)
+    except Exception as e:
+        print(f"LIFESPAN STARTUP ERROR: {e}")
+    
+    yield
+    # Shutdown logic (if any)
+    pass
 
-# Enable CORS for Next.js frontend
+app = FastAPI(title="Bhavan's Plant Health Detection API", lifespan=lifespan)
+
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,37 +48,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-@app.on_event("startup")
-def startup_event():
-    print("Executing startup event...")
-    # Ensure database directory exists
-    # Use /app/data for persistence in Docker
-    # VERCEL FIX: Use /tmp for SQLite databases as the root is read-only
-    default_db = "sqlite:////tmp/plant_health.db" if os.environ.get("VERCEL") else "sqlite:///./plant_health.db"
-    db_url = os.getenv("DATABASE_URL", default_db)
-    print(f"DATABASE_URL is: {db_url}")
-    if db_url.startswith("sqlite:///"):
-        db_path = db_url.replace("sqlite:///", "")
-        db_dir = os.path.dirname(db_path)
-        if db_dir and not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-            print(f"Created database directory: {db_dir}")
-            
-    print("Initializing database...")
-    try:
-        init_db()
-        print("Database initialized successfully.")
-    except Exception as e:
-        print(f"DATABASE INITIALIZATION ERROR: {e}")
-        print("Continuing startup anyway (service will run but DB might fail)...")
-    # VERCEL FIX: Use /tmp for uploads as the root is read-only
-    default_uploads = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
-    uploads_dir = os.getenv("UPLOADS_PATH", default_uploads)
-    if not os.path.exists(uploads_dir):
-        os.makedirs(uploads_dir)
-        print(f"Created uploads directory: {uploads_dir}")
-    print("Startup event complete.")
 
 from pydantic import BaseModel
 
@@ -108,14 +93,14 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
         with open(file_path, "wb") as buffer:
             buffer.write(file_content)
         
-        # Inference using LLM (Gemini Pro Vision)
+        # Inference using LLM
         llm_result = await model_service.predict_with_llm(file_content)
         
         predicted_class = llm_result.get("predicted_class", "Unknown")
         confidence = llm_result.get("confidence", 0.95)
         analysis = llm_result.get("analysis", "")
         
-        # Get local explanation (fallback/enrichment)
+        # Get local explanation
         explanation = EXPLANATIONS.get(predicted_class, {})
         
         # Save to DB
@@ -129,7 +114,6 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
         db.add(new_prediction)
         db.commit()
         
-        # Response format
         return {
             "plant_name": new_prediction.plant_name,
             "predicted_disease": new_prediction.predicted_disease,
@@ -141,7 +125,6 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
             "symptoms": explanation.get("symptoms", ""),
             "nutrient_correction": explanation.get("nutrient_correction", "")
         }
-        
     except Exception as e:
         print(f"Prediction Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -153,8 +136,6 @@ def test_route():
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
     try:
-        # Proactive init check for serverless
-        init_db()
         total = db.query(Prediction).count()
         return {
             "total_predictions": total,
