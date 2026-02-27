@@ -1,10 +1,10 @@
+import { NextResponse } from 'next/server';
+
 export async function GET() {
-    return new Response(JSON.stringify({
+    return NextResponse.json({
         total_predictions: 1240,
         top_plant: "Tomato",
         status: "Online",
-        source: "minimal-stats"
-    }), {
-        headers: { 'Content-Type': 'application/json' }
+        source: "standard-stats"
     });
 }
