@@ -30,7 +30,9 @@ class Prediction(Base):
 # Database Setup
 import os
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./plant_health.db")
+# VERCEL FIX: Use /tmp for SQLite databases as the root is read-only
+default_db = "sqlite:////tmp/plant_health.db" if os.environ.get("VERCEL") else "sqlite:///./plant_health.db"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", default_db)
 
 # Only use check_same_thread: False if we are using SQLite
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):

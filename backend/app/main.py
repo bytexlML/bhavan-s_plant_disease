@@ -35,7 +35,9 @@ def get_db():
 def startup_event():
     print("Executing startup event...")
     # Ensure database directory exists
-    db_url = os.getenv("DATABASE_URL", "sqlite:///./plant_health.db")
+    # VERCEL FIX: Use /tmp for SQLite databases as the root is read-only
+    default_db = "sqlite:////tmp/plant_health.db" if os.environ.get("VERCEL") else "sqlite:///./plant_health.db"
+    db_url = os.getenv("DATABASE_URL", default_db)
     print(f"DATABASE_URL is: {db_url}")
     if db_url.startswith("sqlite:///"):
         db_path = db_url.replace("sqlite:///", "")
