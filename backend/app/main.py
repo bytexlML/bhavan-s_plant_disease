@@ -1,6 +1,8 @@
 
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 import os
 import shutil
@@ -35,8 +37,8 @@ def get_db():
 def startup_event():
     print("Executing startup event...")
     # Ensure database directory exists
-    # VERCEL FIX: Use /tmp for SQLite databases as the root is read-only
-    default_db = "sqlite:////tmp/plant_health.db" if os.environ.get("VERCEL") else "sqlite:///./plant_health.db"
+    # VERCEL/DOCKER FIX: Use /tmp or /app/data
+    default_db = "sqlite:////app/data/plant_health.db" if os.path.exists("/app/data") else "sqlite:///./plant_health.db"
     db_url = os.getenv("DATABASE_URL", default_db)
     print(f"DATABASE_URL is: {db_url}")
     if db_url.startswith("sqlite:///"):
@@ -67,7 +69,7 @@ class UserRegister(BaseModel):
     email: str
     phone: str
 
-@app.post("/register")
+@app.post("/api/register")
 async def register(request: UserRegister, db: Session = Depends(get_db)):
     from .models.database import UserRegistration
     new_user = UserRegistration(
@@ -79,15 +81,15 @@ async def register(request: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "User registered successfully"}
 
-@app.get("/")
+@app.get("/api")
 def read_root():
     return {"message": "Bhavan's Plant Health Detection System API is running."}
 
-@app.get("/health")
+@app.get("/api/health")
 def health_check():
     return {"status": "ok", "service": "plant-diagnosis-backend"}
 
-@app.post("/predict")
+@app.post("/api/predict")
 async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
         # Save file
@@ -135,7 +137,7 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
         print(f"Prediction Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stats")
+@app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
     total = db.query(Prediction).count()
     # Simplified stats for demo
@@ -144,6 +146,23 @@ def get_stats(db: Session = Depends(get_db)):
         "model_accuracy": "95%",  # Target accuracy
         "common_diseases": ["Tomato Late Blight", "Potato Early Blight", "Apple Scab"]
     }
+
+# Mount static files (Frontend)
+# In Docker, the frontend is built into 'frontend/out'
+frontend_path = os.path.join(os.getcwd(), "frontend", "out")
+
+if os.path.exists(frontend_path):
+    print(f"Mounting static frontend from: {frontend_path}")
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    
+    # SPA Fallback: Redirect all non-API 404s to index.html
+    @app.exception_handler(404)
+    async def not_found_exception_handler(request: Request, exc: HTTPException):
+        if not request.url.path.startswith("/api"):
+            return FileResponse(os.path.join(frontend_path, "index.html"))
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+else:
+    print(f"WARNING: Frontend path not found at {frontend_path}. API-only mode.")
 
 if __name__ == "__main__":
     import uvicorn
