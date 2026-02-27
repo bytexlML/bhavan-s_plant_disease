@@ -45,8 +45,13 @@ def startup_event():
             print(f"Created database directory: {db_dir}")
             
     print("Initializing database...")
-    init_db()
-    print("Database initialized.")
+    try:
+        init_db()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"DATABASE INITIALIZATION ERROR: {e}")
+        print("Continuing startup anyway (service will run but DB might fail)...")
+        
     uploads_dir = os.getenv("UPLOADS_PATH", "uploads")
     if not os.path.exists(uploads_dir):
         os.makedirs(uploads_dir)
