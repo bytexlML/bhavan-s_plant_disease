@@ -42,8 +42,3 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-
-# Proactive initialization for serverless
-if os.environ.get("VERCEL"):
-    print("Vercel detected: Proactively initializing database...")
-    init_db()

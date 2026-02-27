@@ -146,6 +146,10 @@ async def predict(file: UploadFile = File(...), db: Session = Depends(get_db)):
         print(f"Prediction Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/test")
+def test_route():
+    return {"status": "alive", "message": "FastAPI is responding on Vercel."}
+
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
     try:
