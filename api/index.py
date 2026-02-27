@@ -1,22 +1,13 @@
-import sys
-import os
+from fastapi import FastAPI
 
-# Add the root directory and backend directory to the Python path
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-backend_dir = os.path.join(root_dir, "backend")
+app = FastAPI()
 
-if root_dir not in sys.path:
-    sys.path.append(root_dir)
-if backend_dir not in sys.path:
-    sys.path.append(backend_dir)
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "debug": "minimal"}
 
-try:
-    from backend.app.main import app
-except ImportError:
-    try:
-        from app.main import app
-    except ImportError as e:
-        print(f"Vercel Index: FINAL IMPORT ERROR - {e}")
-        raise e
+@app.get("/api/test")
+def test():
+    return {"status": "alive", "debug": "minimal"}
 
 # The entry point for Vercel is 'app'
