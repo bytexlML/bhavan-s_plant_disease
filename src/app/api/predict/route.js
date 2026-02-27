@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PLANT_CLASSES, EXPLANATIONS } from '../../utils/explanations';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Gemini API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(request) {
     try {
+        const apiKey = process.env.GEMINI_API_KEY;
+
         const formData = await request.formData();
         const file = formData.get('file');
 
@@ -15,9 +16,24 @@ export async function POST(request) {
             return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
         }
 
+        // Check for API Key
+        if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+            console.warn("GEMINI_API_KEY is missing. Running in simulation mode.");
+            // Simulation mode for demo
+            return NextResponse.json({
+                plant_name: "Apple",
+                predicted_disease: "Apple Scab",
+                confidence_score: "98.50%",
+                category: "Fungal",
+                biological_explanation: "Simulation Mode: GEMINI_API_KEY not configured. To enable real AI diagnosis, please add your key to the environment variables.",
+                recommended_action: "Add GEMINI_API_KEY to your .env or Vercel settings."
+            });
+        }
+
         const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const base64Image = buffer.toString('base64');
+        const base64Image = Buffer.from(bytes).toString('base64');
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = `
         You are a senior Plant Health Expert from Bhavan's Vivekananda College. 
@@ -25,7 +41,7 @@ export async function POST(request) {
         
         Strict Rules:
         1. Select the most likely category from this list: ${PLANT_CLASSES.join(', ')}.
-        2. DO NOT mention you are an AI, a machine learning model, or OpenAI.
+        2. DO NOT mention you are an AI, a machine learning model, or Google.
         3. Speak with authority and professional expertise.
         4. Focus on scientific biological observations.
         
@@ -38,27 +54,24 @@ export async function POST(request) {
         }
         `;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: prompt },
-                        {
-                            type: "image_url",
-                            image_url: {
-                                url: `data:image/jpeg;base64,${base64Image}`,
-                            },
-                        },
-                    ],
-                },
-            ],
-            response_format: { type: "json_object" },
-        });
+        const result = await model.generateContent([
+            prompt,
+            {
+                inlineData: {
+                    data: base64Image,
+                    mimeType: "image/jpeg"
+                }
+            }
+        ]);
 
-        const aiData = JSON.parse(response.choices[0].message.content);
-        const prediction = aiData.predicted_class || PLANT_CLASSES[3]; // Default to healthy apple if fails
+        const response = await result.response;
+        const text = response.text();
+
+        // Extract JSON from response (handling potential markdown blocks)
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const aiData = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+
+        const prediction = aiData.predicted_class || PLANT_CLASSES[3];
         const explanation = EXPLANATIONS[prediction] || EXPLANATIONS[PLANT_CLASSES[3]];
 
         return NextResponse.json({
@@ -71,7 +84,10 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error("OpenAI Error:", error);
-        return NextResponse.json({ error: "Diagnostic system failure" }, { status: 500 });
+        console.error("Gemini API Error:", error);
+        return NextResponse.json({
+            error: "Diagnostic system failure",
+            details: error.message
+        }, { status: 500 });
     }
 }
