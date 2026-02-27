@@ -1,13 +1,9 @@
-from fastapi import FastAPI
+import sys
+import os
 
-app = FastAPI()
+# Add the project root to sys.path
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
 
-@app.get("/api/health")
-def health():
-    return {"status": "ok", "debug": "minimal"}
-
-@app.get("/api/test")
-def test():
-    return {"status": "alive", "debug": "minimal"}
-
-# The entry point for Vercel is 'app'
+from backend.app.main import app
